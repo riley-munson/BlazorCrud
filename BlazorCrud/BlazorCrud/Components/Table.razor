@@ -1,0 +1,199 @@
+﻿@typeparam TData where TData : class
+@using System.Reflection
+@using System.Text.RegularExpressions
+@inject NavigationManager navigationManager
+@attribute [type: RenderModeInteractiveServer]
+
+@if (Searchable)
+{
+	<span class="position-relative search-bar">
+		<InputText @bind-Value="searchStr" class="form-control w-25 d-inline" placeholder="Search" />
+		<i class="bi bi-search"></i>
+	</span>
+	<button @onclick="Filter" class="btn btn-secondary">Search</button>
+}
+<table class="table">
+	<thead>
+		<tr>
+			@foreach (PropertyInfo prop in props)
+			{
+				@if (SortableColumns.Contains(prop.Name))
+				{
+					<SortableColumn Value="@prop.Name" IsSorted="@(prop.Name == sortColumn)" SortDirection="@sortDirection" OnClickHandler="() => Sort(prop)" />
+				}
+				else
+				{
+					<th>@prop.Name</th>
+				}
+			}
+		</tr>
+	</thead>
+	<tbody>
+		@if (DoPaging && pages.Count > 0)
+		{
+			@foreach (TData obj in pages[currentPageIdx])
+			{
+				<tr class="@(RoutePattern == null ? "" : "link-row")">
+					@foreach (PropertyInfo prop in props)
+					{
+						<td @onclick="@(() => GoToRowLink(obj))">@prop.GetValue(obj)</td>
+					}
+				</tr>
+			}
+		}
+		else
+		{
+			@foreach (TData obj in displayData)
+			{
+				<tr class="@(RoutePattern == null ? "" : "link-row")">
+					@foreach (PropertyInfo prop in props)
+					{
+						<td @onclick="@(() => GoToRowLink(obj))">@prop.GetValue(obj)</td>
+					}
+				</tr>
+			}
+		}
+	</tbody>
+</table>
+@if (DoPaging && pages.Count > 1)
+{
+	<span>
+		<button type="button" class="btn btn-secondary" @onclick="PreviousPage">Previous</button>
+		<button type="button" class="btn btn-secondary" @onclick="NextPage">Next</button>
+		Page <input class="form-control d-inline" type="number" value="@(currentPageIdx + 1)" min="1" max="@pages.Count" @onchange="ChangePage" style="width: 7ch" /> of @pages.Count
+	</span>
+}
+
+@code {
+	[Parameter]
+	public bool Searchable { get; set; } = false;
+
+	[Parameter]
+	public bool Sortable { get; set; } = false;
+
+	[Parameter]
+	public IEnumerable<TData> Data { get; set; }
+
+	[Parameter]
+	public IEnumerable<string>? SortableColumns { get; set; } = null;
+
+	[Parameter]
+	public bool DoPaging { get; set; } = false;
+
+	[Parameter]
+	public int PageSize { get; set; } = 5;
+
+	[Parameter]
+	public string? RoutePattern { get; set; } = null;
+
+	[Parameter]
+	public string? Title { get; set; }
+
+	private List<TData> displayData;
+	private string searchStr;
+	private PropertyInfo[] props = typeof(TData).GetProperties();
+	private string sortColumn;
+	private string sortDirection = "asc";
+	private List<List<TData>> pages;
+	private int currentPageIdx = 0;
+
+	protected override void OnInitialized()
+	{
+		displayData = Data == null ? new List<TData>() : Data.ToList();
+		if (Sortable)
+		{
+			SortableColumns = SortableColumns == null ? props.Select(p => p.Name) : SortableColumns;
+			sortColumn = props[0].Name;
+		}
+
+		if (DoPaging) PartitionPages();
+
+	}
+
+	void Filter()
+	{
+		displayData = Data.Where(x => props.Any(p => p.GetValue(x) == null ? false : p.GetValue(x).ToString().ToLower().Contains(searchStr.ToLower()))).ToList();
+		if (DoPaging) PartitionPages();
+	}
+
+	void Sort(PropertyInfo prop)
+	{
+		if (sortDirection == "desc") sortDirection = "asc";
+		else sortDirection = sortColumn == prop.Name ? "desc" : "asc";
+
+		sortColumn = prop.Name;
+
+		if (sortDirection == "asc") displayData.Sort((x, y) => prop.GetValue(x) == null ? 1 : (prop.GetValue(x) as IComparable).CompareTo(prop.GetValue(y)));
+		else displayData.Sort((x, y) => prop.GetValue(y) == null ? -1 : (prop.GetValue(y) as IComparable).CompareTo(prop.GetValue(x)));
+
+		if (DoPaging) PartitionPages();
+	}
+
+	void PartitionPages()
+	{
+		pages = new();
+		List<TData> page = new();
+		int idx = 0;
+		foreach(TData obj in displayData)
+		{
+			page.Add(obj);
+			idx++;
+
+			if (idx % PageSize == 0 || idx == displayData.Count)
+			{
+				pages.Add(page);
+				page = new();
+			}
+		}
+	}
+
+	void NextPage()
+	{
+		if (currentPageIdx < pages.Count - 1) currentPageIdx++;
+	}
+	void PreviousPage()
+	{
+		if (currentPageIdx > 0) currentPageIdx--;
+	}
+
+	private string GetRoute(TData obj)
+	{
+		string route = RoutePattern!;
+		IEnumerable<string> routeParams = Regex.Matches(route, @"\{(.*?)\}").Select(x => x.Value.Replace("{", "").Replace("}", ""));
+		foreach(string param in routeParams)
+		{
+			route = Regex.Replace(route, @"\{(" + param + @")?\}", props.First(p => p.Name == param).GetValue(obj).ToString());
+		}
+
+		return route;
+	}
+	private void GoToRowLink(TData obj)
+	{
+		if(RoutePattern != null)
+		{
+			navigationManager.NavigateTo(GetRoute(obj));
+		}
+	}
+	private void ChangePage(ChangeEventArgs e)
+	{
+		int pageIdx = 0;
+		try
+		{
+			pageIdx = int.Parse(e.Value.ToString()) - 1;
+		}
+		catch
+		{
+			return;
+		}
+
+		if (pageIdx < 0)
+		{
+			pageIdx = 0;
+		}
+		else if (pageIdx > pages.Count - 1)
+		{
+			pageIdx = pages.Count - 1;
+		}
+		currentPageIdx = pageIdx;
+	}
+}

@@ -1,0 +1,70 @@
+﻿@inject IEmployeeRepository repository
+@inject NavigationManager navigationManager
+@page "/employees/details/{id:int}"
+@rendermode InteractiveServer
+
+@if(employee == null)
+{
+	<p>loading...</p>
+}
+else
+{
+	<div class="details-container">
+		<div class="details-header d-flex justify-content-between align-items-center px-3">
+			<h1 class="display-3">@employee.FirstName @employee.LastName</h1>
+			<div class="d-flex flex-column align-items-end">
+				<h1>@employee.Title</h1>
+				<span>@employee.Department</span>
+			</div>
+		</div>
+		<div class="d-flex justify-content-between">
+			<div>
+				<p><b>Email:</b> @employee.Email</p>
+				<p><b>Hire Date:</b> @employee.HireDate.ToString("dd MMMM yyyy")</p>
+				<p><b>Leave Date:</b> @(employee.LeaveDate == null ? "N/A" : employee.LeaveDate.Value.ToString("dd MMMM yyyy"))</p>
+			</div>
+			@if (employee.IsTerminated)
+			{
+				<div>
+					<p class="text-danger"><b>Terminated</b></p>
+				</div>
+			}
+			
+			<div>
+				<div class="form-check">
+					<InputCheckbox @bind-Value="employee.IsManager" class="form-check-input" disabled="true" />
+					<label class="form-check-label">Manager</label>
+				</div>
+				<div class="form-check">
+					<InputCheckbox @bind-Value="employee.IsExecutive" class="form-check-input" disabled="true" />
+					<label class="form-check-label">Executive</label>
+				</div>
+			</div>
+		</div>
+		<div>
+			<a class="btn btn-primary" href="/employees/update/@Id">Edit</a>
+			<button type="button" class="btn btn-danger" @onclick="Delete">Delete</button>
+		</div>
+	</div>
+	
+}
+
+@code {
+	[Parameter]
+	public int Id { get; set; }
+
+	private Employee employee;
+	protected override async Task OnInitializedAsync()
+	{
+		employee = await repository.GetById(Id);
+	}
+
+	private async Task Delete()
+	{
+		await repository.Delete(employee);
+		navigationManager.NavigateTo("/employees/list");
+	}
+
+	
+
+}

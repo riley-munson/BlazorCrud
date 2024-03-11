@@ -1,0 +1,22 @@
+﻿@page "/clients/list"
+@inject IClientRepository repository
+@rendermode InteractiveServer
+
+<h3 class="pb-5 pt-2">Client List</h3>
+@if (clients != null)
+{
+	<div class="mb-2">
+		<Table Data="clients" Searchable="true" Sortable="true" DoPaging="true" PageSize="3" RoutePattern="/clients/details/{Id}"></Table>
+	</div>
+
+	<a href="/employees/new" class="btn btn-primary">New Employee</a>
+}
+
+@code {
+	private IEnumerable<ClientListDto> clients;
+
+	protected override async Task OnInitializedAsync()
+	{
+		clients = (await repository.GetAll()).Select(c => c.ToClientListDto());
+	}
+}

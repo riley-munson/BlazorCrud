@@ -1,0 +1,23 @@
+﻿@page "/employees/list"
+@inject IEmployeeRepository repository
+
+
+<h3 class="pb-5 pt-2">Employee List</h3>
+@if(employees != null)
+{
+	<div class="mb-2">
+		<Table Data="employees" Searchable="true" Sortable="true" DoPaging="true" PageSize="10" RoutePattern="/employees/details/{Id}"></Table>
+	</div>
+	
+	<a href="/employees/new" class="btn btn-primary">New Employee</a>
+}
+
+
+@code {
+	private IEnumerable<Employee> employees;
+
+	protected override async Task OnInitializedAsync()
+	{
+		employees = await repository.GetAll();
+	}
+}

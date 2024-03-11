@@ -1,0 +1,51 @@
+﻿@inject IClientRepository repository
+@inject NavigationManager navigationManager
+@page "/clients/details/{id:int}"
+@rendermode InteractiveServer
+
+@if(client == null)
+{
+	<p>loading...</p>
+}
+else
+{
+	<div class="d-flex" style="column-gap: 5em;">
+		<div>
+			<h3>@client.Name</h3>
+			<div>@client.Address1</div>
+			<div>@client.Address2</div>
+			<div>@client.City, @client.State @client.PostalCode</div>
+			<div>@client.Country</div>
+			<div>
+				<a href="/clients/update/@Id" class="btn btn-secondary">Edit</a>
+				<button type="button" class="btn btn-danger" @onclick="Delete">Delete</button>
+			</div>
+		</div>
+		<div>
+			<h3>Contacts</h3>
+			<Table Data="client.Contacts" Sortable="true" DoPaging="true" PageSize="10"></Table>
+		</div>
+	</div>
+	
+	
+	
+}
+
+
+@code {
+	[Parameter]
+	public int Id { get; set; }
+
+	private DataAccess.Models.Client client;
+
+	protected override async Task OnInitializedAsync()
+	{
+		client = await repository.GetById(Id);
+	}
+
+	void Delete()
+	{
+		repository.Delete(client);
+		navigationManager.NavigateTo("/clients/list");
+	}
+}

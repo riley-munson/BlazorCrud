@@ -1,0 +1,115 @@
+﻿@page "/employees/new"
+@page "/employees/update/{Id:int}"
+@inject IEmployeeRepository repository
+@inject NavigationManager navigationManager
+@attribute [StreamRendering(true)]
+@rendermode InteractiveServer
+<h3>NewEmployee</h3>
+
+<EditForm Model="dto" OnValidSubmit="HandleSubmit" FormName="Form1" >
+	<DataAnnotationsValidator />
+	<span class="text-danger">@pageError</span>
+	<div class="form-grid">
+		<div>
+			<label for="firstName" class="form-label">First Name</label>
+			<ValidationMessage For=@(() => dto.FirstName) />
+			<InputText id="firstName" class="form-control" @bind-Value="@dto.FirstName"></InputText>
+		</div>
+		<div>
+			<label for="lastname" class="form-label">Last Name</label>
+			<ValidationMessage For=@(() => dto.LastName) />
+			<InputText id="lastName" class="form-control" @bind-Value="@dto.LastName"></InputText>
+		</div>
+		<div>
+			<label for="email" class="form-label">Email</label>
+			<ValidationMessage For=@(() => dto.Email) />
+			<InputText id="email" class="form-control" @bind-Value="@dto.Email"></InputText>
+		</div>
+		<div>
+			<label for="title" class="form-label">Title</label>
+			<ValidationMessage For=@(() => dto.Title) />
+			<InputText id="title" class="form-control" @bind-Value="@dto.Title"></InputText>
+		</div>
+		<div>
+			<label for="department" class="form-label">Department</label>
+			<ValidationMessage For=@(() => dto.Department) />
+			<InputText id="department" class="form-control" @bind-Value="@dto.Department"></InputText>
+		</div>
+		<div>
+			<label for="hireDate" class="form-label">Hire Date</label>
+			<ValidationMessage For=@(() => dto.HireDate) />
+			<InputDate id="hireDate" class="form-control" @bind-Value="@dto.HireDate"></InputDate>
+		</div>
+		@if(Id != null)
+		{
+			<div>
+				<label for="hireDate" class="form-label">Leave Date</label>
+				<InputDate id="hireDate" class="form-control" @bind-Value="@dto.LeaveDate"></InputDate>
+			</div>
+		}
+		<div>
+			<div class="form-check">
+				<InputCheckbox id="isManager" class="form-check-input" @bind-Value="@dto.IsManager"></InputCheckbox>
+				<label for="isManager" class="form-check-label">Is Manager</label>			
+			</div>
+			<div class="form-check">
+				<InputCheckbox id="isExecutive" class="form-check-input" @bind-Value="@dto.IsExecutive"></InputCheckbox>
+				<label for="isExecutive" class="form-check-label">Is Executive</label>			
+			</div>
+			<div class="form-check">
+				<InputCheckbox id="isTerminated" class="form-check-input" @bind-Value="@dto.IsTerminated"></InputCheckbox>
+				<label for="isTerminated" class="form-check-label">Is Terminated</label>
+			</div>
+		</div>
+		@if(Id == null)
+		{
+			<div></div>
+			<input type="submit" class="btn btn-primary" value="Submit" />
+		}
+		else
+		{
+			<input type="submit" class="btn btn-primary" value="Update" />
+		}
+	</div>
+</EditForm> 
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+
+
+	EmployeeDto dto = new EmployeeDto();
+	string pageError = "";
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (Id != null)
+		{
+			dto = (await repository.GetById(Id.Value)).ToEmployeeDto();
+		}
+	}
+
+	private async Task HandleSubmit(EditContext context)
+	{
+		try
+		{
+			if(Id == null)
+			{
+				Employee employee = dto.ToEmployee();
+				var results = await repository.Add(employee);
+				navigationManager.NavigateTo("/employees/list");
+			}
+			else
+			{
+				Employee employee = dto.ToEmployee();
+				employee.Id = Id.Value;
+				var results = await repository.Update(employee);
+				navigationManager.NavigateTo("/employees/details/" + Id.Value);
+			}
+		}
+		catch(Exception e)
+		{
+			pageError = "Something went wrong. Please try again";
+		}
+	}
+}

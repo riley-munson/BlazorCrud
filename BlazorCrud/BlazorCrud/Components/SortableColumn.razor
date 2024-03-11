@@ -1,0 +1,32 @@
+﻿
+@if (IsSorted)
+{
+	<th class="sortable @SortDirection" @onclick="OnClickHandler">@Value</th>
+}
+else
+{
+	<th class="sortable" @onclick="OnClickHandler">@Value</th>
+}
+
+
+@code {
+	[Parameter]
+	public bool IsSorted { get; set; } = false;
+
+	[Parameter]
+	public string? SortDirection { get; set; }
+
+	[Parameter]
+	public string Value { get; set; } = "";
+
+	[Parameter]
+	public EventCallback OnClickHandler { get; set; }
+
+	protected override void OnInitialized()
+	{
+		if (IsSorted && SortDirection == null)
+		{
+			throw new NullReferenceException("A SortableColumn that has IsSorted = true must declare SortDirection.");
+		}
+	}
+}

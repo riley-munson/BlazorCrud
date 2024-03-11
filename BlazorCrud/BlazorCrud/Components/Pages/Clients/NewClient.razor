@@ -1,0 +1,133 @@
+﻿@page "/clients/new"
+@page "/clients/update/{Id:int}"
+@inject IClientRepository repository
+@inject NavigationManager navigationManager
+@attribute [StreamRendering(true)]
+@rendermode InteractiveServer
+
+<h3>New Client</h3>
+<EditForm Model="dto" OnValidSubmit="HandleSubmit" FormName="Form1">
+	<DataAnnotationsValidator />
+	<span class="text-danger">@pageError</span>
+	<div class="form-grid pb-5">
+		<div>
+			<label class="form-label">Name</label>
+			<ValidationMessage For=@(() => dto.Name) />
+			<InputText class="form-control" @bind-Value="@dto.Name" />
+		</div>
+		<div>
+			<label class="form-label">Address 1</label>
+			<InputText class="form-control" @bind-Value="@dto.Address1" />
+		</div>
+		<div>
+			<label class="form-label">Address 2</label>
+			<InputText class="form-control" @bind-Value="@dto.Address2" />
+		</div>
+		<div>
+			<label class="form-label">City</label>
+			<InputText class="form-control" @bind-Value="@dto.City" />
+		</div>
+		<div>
+			<label class="form-label">State</label>
+			<InputText class="form-control" @bind-Value="@dto.State" />
+		</div>
+		<div>
+			<label class="form-label">Postal Code</label>
+			<InputText class="form-control" @bind-Value="@dto.PostalCode" />
+		</div>
+		<div>
+			<label class="form-label">Country</label>
+			<InputText class="form-control" @bind-Value="@dto.Country" />
+		</div>
+	</div>
+	<h3>Contacts</h3>
+	<div class="form-grid">
+		
+		@for(int i = 0; i < dto.Contacts.Count; i++)
+		{
+			int idx = i;
+			var contact = dto.Contacts[i];
+
+			<div style="grid-column: 1">
+				<label class="form-label">First Name</label>
+				<InputText class="form-control" @bind-Value="@contact.FirstName" />
+			</div>
+			<div>
+				<label class="form-label">Last Name</label>
+				<InputText class="form-control" @bind-Value="@contact.LastName" />
+			</div>
+			<div>
+				<label class="form-label">Email</label>
+				<ValidationMessage For=@(() => contact.Email) />
+				<InputText class="form-control" @bind-Value="@contact.Email" />
+			</div>
+			<div>
+				<label class="form-label">Phone 1</label>
+				<ValidationMessage For=@(() => contact.PhoneNumber1) />
+				<InputText class="form-control" @bind-Value="@contact.PhoneNumber1" />
+			</div>
+			<div>
+				<label class="form-label">Phone 2</label>
+				<ValidationMessage For=@(() => contact.PhoneNumber2) />
+				<InputText class="form-control" @bind-Value="@contact.PhoneNumber2" />
+			</div>
+			<button type="button" class="btn btn-danger" @onclick=@(() => dto.Contacts.RemoveAt(idx)) style="align-self: end">Remove</button>
+			<div class="pb-5"></div>
+		}
+		<button type="button" class="btn btn-secondary" @onclick=@(() => dto.Contacts!.Add(new ClientContact())) style="grid-column: 1">Add Contact</button>
+		@if (Id == null)
+		{
+			<div></div>
+			<input type="submit" class="btn btn-primary" value="Submit" />
+		}
+		else
+		{
+			<input type="submit" class="btn btn-primary" value="Update" />
+		}
+	</div>
+</EditForm>
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+
+
+	ClientFormDto dto = new ClientFormDto();
+	string pageError = "";
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (Id != null)
+		{
+			dto = (await repository.GetById(Id.Value)).ToClientFormDto();
+		}
+	}
+
+	private async Task HandleSubmit(EditContext context)
+	{
+		try
+		{
+			if (Id == null)
+			{
+				DataAccess.Models.Client client = dto.ToClient();
+				var results = await repository.Add(client);
+				navigationManager.NavigateTo("/");
+			}
+			else
+			{
+				DataAccess.Models.Client client = dto.ToClient();
+				client.Id = Id.Value;
+				foreach(ClientContact contact in client.Contacts)
+				{
+					contact.ClientId = Id.Value;
+				}
+				var results = await repository.Update(client);
+				navigationManager.NavigateTo("/clients/details/" + Id.Value);
+			}
+		}
+		catch (Exception e)
+		{
+			pageError = "Something went wrong. Please try again";
+		}
+	}
+}
